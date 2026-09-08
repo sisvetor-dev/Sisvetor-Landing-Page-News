@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, ArrowRight, Download, FileText, X } from 'lucide-react';
 import type { Documento } from '../lib/api/documento';
+import { CategoriaVetor } from '../lib/api/enum';
+import { pertenceCategoria } from '../lib/utils';
 import { useDocumentosAtivos } from '../lib/hooks/useDocumentosAtivos';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
@@ -14,6 +16,8 @@ export function meta() {
 }
 
 const TAMANHO_PAGINA = 12;
+
+const CATEGORIAS: CategoriaVetor[] = [CategoriaVetor.TODOS, CategoriaVetor.DENGUE, CategoriaVetor.CHAGAS];
 
 export function formatarData(data?: string): string {
     if (!data) return "";
@@ -34,18 +38,23 @@ export function formatarTamanho(bytes?: number): string {
 export default function Documentos() {
     const { documentos, carregando } = useDocumentosAtivos();
     const [pagina, setPagina] = useState(0);
+    const [categoriaSelecionada, setCategoriaSelecionada] = useState<CategoriaVetor>(CategoriaVetor.TODOS);
     const [tagSelecionada, setTagSelecionada] = useState<string | null>(null);
+
+    const documentosPorCategoria = useMemo(() => {
+        return documentos.filter((doc) => pertenceCategoria(doc.categoriaVetor, categoriaSelecionada));
+    }, [documentos, categoriaSelecionada]);
 
     const tagsDisponiveis = useMemo(() => {
         const tags = new Set<string>();
-        documentos.forEach((doc) => doc.tags?.forEach((tag) => tags.add(tag.tag)));
+        documentosPorCategoria.forEach((doc) => doc.tags?.forEach((tag) => tags.add(tag.tag)));
         return Array.from(tags).sort((a, b) => a.localeCompare(b, "pt-BR"));
-    }, [documentos]);
+    }, [documentosPorCategoria]);
 
     const documentosFiltrados = useMemo(() => {
-        if (!tagSelecionada) return documentos;
-        return documentos.filter((doc) => doc.tags?.some((tag) => tag.tag === tagSelecionada));
-    }, [documentos, tagSelecionada]);
+        if (!tagSelecionada) return documentosPorCategoria;
+        return documentosPorCategoria.filter((doc) => doc.tags?.some((tag) => tag.tag === tagSelecionada));
+    }, [documentosPorCategoria, tagSelecionada]);
 
     const totalPaginas = Math.ceil(documentosFiltrados.length / TAMANHO_PAGINA);
     const documentosDaPagina = documentosFiltrados.slice(
@@ -53,10 +62,23 @@ export default function Documentos() {
         pagina * TAMANHO_PAGINA + TAMANHO_PAGINA
     );
 
+    function selecionarCategoria(categoria: CategoriaVetor) {
+        setCategoriaSelecionada(categoria);
+        setTagSelecionada(null);
+        setPagina(0);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     function selecionarTag(tag: string | null) {
         setTagSelecionada(tag);
         setPagina(0);
         window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function limparFiltros() {
+        setCategoriaSelecionada(CategoriaVetor.TODOS);
+        setTagSelecionada(null);
+        setPagina(0);
     }
 
     function irParaPagina(novaPagina: number) {
@@ -71,9 +93,9 @@ export default function Documentos() {
             <main className="flex flex-1 flex-col">
                 <section className="bg-gradient-to-b from-white to-indigo-50 py-10">
                     <div className="mx-auto max-w-7xl px-6">
-                        <span className="badge badge-primary badge-outline w-fit">
+                        {/* <span className="badge badge-primary badge-outline w-fit">
                             Biblioteca
-                        </span>
+                        </span> */}
                         <h1 className="mt-5 text-4xl font-bold text-slate-900">
                             Documentos Técnicos
                         </h1>
@@ -86,33 +108,60 @@ export default function Documentos() {
 
                 <section className="flex flex-1 flex-col justify-center bg-slate-50 py-10">
                     <div className="mx-auto w-full max-w-7xl px-6">
-                        {tagsDisponiveis.length > 0 && (
-                            <div className="mb-8 flex flex-wrap items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => selecionarTag(null)}
-                                    className={`badge badge-lg cursor-pointer border-slate-300 ${
-                                        tagSelecionada === null
-                                            ? "badge-primary text-white"
-                                            : "badge-outline bg-white text-slate-600 hover:border-indigo-400 hover:text-indigo-700"
-                                    }`}
-                                >
-                                    Todos
-                                </button>
-                                {tagsDisponiveis.map((tag) => (
+                        <div className="mb-6">
+                            <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Categoria
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                                {CATEGORIAS.map((categoria) => (
                                     <button
-                                        key={tag}
+                                        key={categoria}
                                         type="button"
-                                        onClick={() => selecionarTag(tag)}
+                                        onClick={() => selecionarCategoria(categoria)}
                                         className={`badge badge-lg cursor-pointer border-slate-300 ${
-                                            tagSelecionada === tag
+                                            categoriaSelecionada === categoria
+                                                ? "border-cyan-300 bg-cyan-600 text-white"
+                                                : "badge-outline bg-white text-slate-600 hover:border-cyan-400 hover:text-cyan-700"
+                                        }`}
+                                    >
+                                        {categoria}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {tagsDisponiveis.length > 0 && (
+                            <div className="mb-8">
+                                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Tags
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => selecionarTag(null)}
+                                        className={`badge badge-lg cursor-pointer border-slate-300 ${
+                                            tagSelecionada === null
                                                 ? "badge-primary text-white"
                                                 : "badge-outline bg-white text-slate-600 hover:border-indigo-400 hover:text-indigo-700"
                                         }`}
                                     >
-                                        {tag}
+                                        Todos
                                     </button>
-                                ))}
+                                    {tagsDisponiveis.map((tag) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() => selecionarTag(tag)}
+                                            className={`badge badge-lg cursor-pointer border-slate-300 ${
+                                                tagSelecionada === tag
+                                                    ? "badge-primary text-white"
+                                                    : "badge-outline bg-white text-slate-600 hover:border-indigo-400 hover:text-indigo-700"
+                                            }`}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
@@ -125,17 +174,21 @@ export default function Documentos() {
                                 <FileText className="mx-auto text-slate-400" size={40} />
                                 <p className="mt-4 text-lg text-slate-600">
                                     {tagSelecionada
-                                        ? `Nenhum documento encontrado para a tag "${tagSelecionada}".`
+                                        ? `Nenhum documento encontrado para a tag "${tagSelecionada}"${
+                                              categoriaSelecionada !== CategoriaVetor.TODOS ? ` em ${categoriaSelecionada}` : ""
+                                          }.`
+                                        : categoriaSelecionada !== CategoriaVetor.TODOS
+                                        ? `Nenhum documento encontrado em ${categoriaSelecionada}.`
                                         : "Nenhum documento publicado até o momento."}
                                 </p>
-                                {tagSelecionada && (
+                                {(tagSelecionada || categoriaSelecionada !== CategoriaVetor.TODOS) && (
                                     <button
                                         type="button"
-                                        onClick={() => selecionarTag(null)}
+                                        onClick={limparFiltros}
                                         className="btn btn-outline btn-sm mt-4 gap-2 rounded-full"
                                     >
                                         <X size={14} />
-                                        Limpar filtro
+                                        Limpar filtros
                                     </button>
                                 )}
                             </div>

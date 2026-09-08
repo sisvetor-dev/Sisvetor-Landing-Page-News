@@ -1,12 +1,23 @@
 import { LogIn, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 export function Header() {
 
   const [showSearch, setShowSearch] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
+  const navigate = useNavigate();
+
+  function buscar(evento: React.FormEvent) {
+    evento.preventDefault();
+    const termo = search.trim();
+    if (!termo) return;
+
+    navigate(`/search?q=${encodeURIComponent(termo)}`);
+    setSearch("");
+    setShowSearch(false);
+  }
 
   useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -108,15 +119,25 @@ export function Header() {
 
                 <div className="mx-auto max-w-7xl px-6 py-4">
 
-                    <input
-                        autoFocus
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Buscar notícias..."
-                          className="input input-bordered w-full rounded-full border-2 border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-sky-600 focus:outline-none"
-
-                    />
+                    <form onSubmit={buscar} role="search" className="relative">
+                        <input
+                            autoFocus={showSearch}
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Buscar notícias, eventos, documentos..."
+                            aria-label="Buscar no portal"
+                            className="input input-bordered w-full rounded-full border-2 border-slate-300 pr-12 text-slate-800 placeholder:text-slate-400 focus:border-sky-600 focus:outline-none"
+                        />
+                        <button
+                            type="submit"
+                            aria-label="Buscar"
+                            disabled={!search.trim()}
+                            className="btn btn-circle btn-ghost btn-sm absolute right-1 top-1/2 -translate-y-1/2 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+                        >
+                            <Search size={16} />
+                        </button>
+                    </form>
 
                 </div>
 

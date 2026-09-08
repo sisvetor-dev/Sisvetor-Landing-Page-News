@@ -9,4 +9,5 @@ export default [
   route("/documentos", "routes/documentos.tsx"),
   route("/documentos/:slug", "routes/documentos.$slug.tsx"),
   route("/contato", "routes/contato.tsx"),
+  route("/search", "routes/search.tsx"),
 ] satisfies RouteConfig;

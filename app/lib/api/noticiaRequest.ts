@@ -5,8 +5,20 @@ export class NoticiaRequester {
         this.baseUrl = baseUrl;
     }
 
-    async fetchNoticiasAtivas(page: number = 0, size: number = 20) {
-        const response = await fetch(`${this.baseUrl}/ativo?page=${page}&size=${size}&sort=id,desc`, {
+    async fetchNoticiasAtivas(page: number = 0, size: number = 20, q?: string, categoria?: string) {
+        const params = new URLSearchParams({
+            page: String(page),
+            size: String(size),
+            sort: 'id,desc',
+        });
+        if (q) {
+            params.set('q', q);
+        }
+        if (categoria) {
+            params.set('categoria', categoria);
+        }
+
+        const response = await fetch(`${this.baseUrl}/ativo?${params.toString()}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

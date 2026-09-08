@@ -22,6 +22,6 @@ function getRequester(): PortalRequester {
     return requester;
 }
 
-export async function getDocumentosAtivos(page: number = 0, size: number = 100): Promise<DocumentoPage> {
-    return getRequester().fetchAtivos(page, size, "id,desc");
+export async function getDocumentosAtivos(page: number = 0, size: number = 100, q?: string, categoria?: string): Promise<DocumentoPage> {
+    return getRequester().fetchAtivos(page, size, "id,desc", q, categoria);
 }

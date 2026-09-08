@@ -13,6 +13,6 @@ function getNoticiaRequester(): NoticiaRequester {
     return noticiaRequester;
 }
 
-export async function getNoticiasAtivas(page: number = 0, size: number = 20): Promise<NoticiaPage> {
-    return getNoticiaRequester().fetchNoticiasAtivas(page, size);
+export async function getNoticiasAtivas(page: number = 0, size: number = 20, q?: string, categoria?: string): Promise<NoticiaPage> {
+    return getNoticiaRequester().fetchNoticiasAtivas(page, size, q, categoria);
 }

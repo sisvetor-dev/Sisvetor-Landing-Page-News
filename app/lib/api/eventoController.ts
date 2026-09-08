@@ -22,7 +22,7 @@ function getRequester(): PortalRequester {
     return requester;
 }
 
-export async function getEventosAtivos(page: number = 0, size: number = 100): Promise<EventoPage> {
+export async function getEventosAtivos(page: number = 0, size: number = 100, q?: string, categoria?: string): Promise<EventoPage> {
     // Ordena pela data de início para a home poder mostrar os próximos eventos.
-    return getRequester().fetchAtivos(page, size, "dataInicio,asc");
+    return getRequester().fetchAtivos(page, size, "dataInicio,asc", q, categoria);
 }

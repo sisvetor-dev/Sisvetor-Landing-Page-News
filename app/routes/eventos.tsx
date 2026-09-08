@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, ArrowRight, CalendarDays, MapPin, X } from 'lucide-react';
 import type { Evento } from '../lib/api/evento';
+import { CategoriaVetor } from '../lib/api/enum';
+import { pertenceCategoria } from '../lib/utils';
 import { useEventosAtivos } from '../lib/hooks/useEventosAtivos';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
@@ -14,6 +16,8 @@ export function meta() {
 }
 
 const TAMANHO_PAGINA = 12;
+
+const CATEGORIAS: CategoriaVetor[] = [CategoriaVetor.TODOS, CategoriaVetor.DENGUE, CategoriaVetor.CHAGAS];
 
 export function formatarData(data?: string): string {
     if (!data) return "";
@@ -36,18 +40,23 @@ export function formatarHora(hora?: string): string {
 export default function Eventos() {
     const { eventos, carregando } = useEventosAtivos();
     const [pagina, setPagina] = useState(0);
+    const [categoriaSelecionada, setCategoriaSelecionada] = useState<CategoriaVetor>(CategoriaVetor.TODOS);
     const [tagSelecionada, setTagSelecionada] = useState<string | null>(null);
+
+    const eventosPorCategoria = useMemo(() => {
+        return eventos.filter((evento) => pertenceCategoria(evento.categoriaVetor, categoriaSelecionada));
+    }, [eventos, categoriaSelecionada]);
 
     const tagsDisponiveis = useMemo(() => {
         const tags = new Set<string>();
-        eventos.forEach((evento) => evento.tags?.forEach((tag) => tags.add(tag.tag)));
+        eventosPorCategoria.forEach((evento) => evento.tags?.forEach((tag) => tags.add(tag.tag)));
         return Array.from(tags).sort((a, b) => a.localeCompare(b, "pt-BR"));
-    }, [eventos]);
+    }, [eventosPorCategoria]);
 
     const eventosFiltrados = useMemo(() => {
-        if (!tagSelecionada) return eventos;
-        return eventos.filter((evento) => evento.tags?.some((tag) => tag.tag === tagSelecionada));
-    }, [eventos, tagSelecionada]);
+        if (!tagSelecionada) return eventosPorCategoria;
+        return eventosPorCategoria.filter((evento) => evento.tags?.some((tag) => tag.tag === tagSelecionada));
+    }, [eventosPorCategoria, tagSelecionada]);
 
     const totalPaginas = Math.ceil(eventosFiltrados.length / TAMANHO_PAGINA);
     const eventosDaPagina = eventosFiltrados.slice(
@@ -55,10 +64,23 @@ export default function Eventos() {
         pagina * TAMANHO_PAGINA + TAMANHO_PAGINA
     );
 
+    function selecionarCategoria(categoria: CategoriaVetor) {
+        setCategoriaSelecionada(categoria);
+        setTagSelecionada(null);
+        setPagina(0);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     function selecionarTag(tag: string | null) {
         setTagSelecionada(tag);
         setPagina(0);
         window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function limparFiltros() {
+        setCategoriaSelecionada(CategoriaVetor.TODOS);
+        setTagSelecionada(null);
+        setPagina(0);
     }
 
     function irParaPagina(novaPagina: number) {
@@ -73,9 +95,9 @@ export default function Eventos() {
             <main className="flex flex-1 flex-col">
                 <section className="bg-gradient-to-b from-white to-emerald-50 py-10">
                     <div className="mx-auto max-w-7xl px-6">
-                        <span className="badge badge-success badge-outline w-fit">
+                        {/* <span className="badge badge-success badge-outline w-fit">
                             Agenda
-                        </span>
+                        </span> */}
                         <h1 className="mt-5 text-4xl font-bold text-slate-900">
                             Eventos do SisVetor
                         </h1>
@@ -88,33 +110,60 @@ export default function Eventos() {
 
                 <section className="flex flex-1 flex-col justify-center bg-slate-50 py-10">
                     <div className="mx-auto w-full max-w-7xl px-6">
-                        {tagsDisponiveis.length > 0 && (
-                            <div className="mb-8 flex flex-wrap items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => selecionarTag(null)}
-                                    className={`badge badge-lg cursor-pointer border-slate-300 ${
-                                        tagSelecionada === null
-                                            ? "badge-success text-white"
-                                            : "badge-outline bg-white text-slate-600 hover:border-emerald-400 hover:text-emerald-700"
-                                    }`}
-                                >
-                                    Todos
-                                </button>
-                                {tagsDisponiveis.map((tag) => (
+                        <div className="mb-6">
+                            <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Categoria
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                                {CATEGORIAS.map((categoria) => (
                                     <button
-                                        key={tag}
+                                        key={categoria}
                                         type="button"
-                                        onClick={() => selecionarTag(tag)}
+                                        onClick={() => selecionarCategoria(categoria)}
                                         className={`badge badge-lg cursor-pointer border-slate-300 ${
-                                            tagSelecionada === tag
+                                            categoriaSelecionada === categoria
+                                                ? "border-cyan-300 bg-cyan-600 text-white"
+                                                : "badge-outline bg-white text-slate-600 hover:border-cyan-400 hover:text-cyan-700"
+                                        }`}
+                                    >
+                                        {categoria}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {tagsDisponiveis.length > 0 && (
+                            <div className="mb-8">
+                                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Tags
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => selecionarTag(null)}
+                                        className={`badge badge-lg cursor-pointer border-slate-300 ${
+                                            tagSelecionada === null
                                                 ? "badge-success text-white"
                                                 : "badge-outline bg-white text-slate-600 hover:border-emerald-400 hover:text-emerald-700"
                                         }`}
                                     >
-                                        {tag}
+                                        Todos
                                     </button>
-                                ))}
+                                    {tagsDisponiveis.map((tag) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() => selecionarTag(tag)}
+                                            className={`badge badge-lg cursor-pointer border-slate-300 ${
+                                                tagSelecionada === tag
+                                                    ? "badge-success text-white"
+                                                    : "badge-outline bg-white text-slate-600 hover:border-emerald-400 hover:text-emerald-700"
+                                            }`}
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
@@ -127,17 +176,21 @@ export default function Eventos() {
                                 <CalendarDays className="mx-auto text-slate-400" size={40} />
                                 <p className="mt-4 text-lg text-slate-600">
                                     {tagSelecionada
-                                        ? `Nenhum evento encontrado para a tag "${tagSelecionada}".`
+                                        ? `Nenhum evento encontrado para a tag "${tagSelecionada}"${
+                                              categoriaSelecionada !== CategoriaVetor.TODOS ? ` em ${categoriaSelecionada}` : ""
+                                          }.`
+                                        : categoriaSelecionada !== CategoriaVetor.TODOS
+                                        ? `Nenhum evento encontrado em ${categoriaSelecionada}.`
                                         : "Nenhum evento programado no momento."}
                                 </p>
-                                {tagSelecionada && (
+                                {(tagSelecionada || categoriaSelecionada !== CategoriaVetor.TODOS) && (
                                     <button
                                         type="button"
-                                        onClick={() => selecionarTag(null)}
+                                        onClick={limparFiltros}
                                         className="btn btn-outline btn-sm mt-4 gap-2 rounded-full"
                                     >
                                         <X size={14} />
-                                        Limpar filtro
+                                        Limpar filtros
                                     </button>
                                 )}
                             </div>

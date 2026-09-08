@@ -11,12 +11,18 @@ export class PortalRequester {
         this.baseUrl = baseUrl;
     }
 
-    async fetchAtivos(page: number = 0, size: number = 20, sort: string = "id,desc") {
+    async fetchAtivos(page: number = 0, size: number = 20, sort: string = "id,desc", q?: string, categoria?: string) {
         const params = new URLSearchParams({
             page: String(page),
             size: String(size),
             sort
         });
+        if (q) {
+            params.set("q", q);
+        }
+        if (categoria) {
+            params.set("categoria", categoria);
+        }
 
         const response = await fetch(`${this.baseUrl}/ativo?${params.toString()}`, {
             method: "GET",
